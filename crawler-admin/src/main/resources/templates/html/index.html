@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="UTF-8" />
+<title>爬虫系统</title>
+<link rel="icon" href="./icon/icon.jpg" type="image/x-icon"></link>
+
+<!-- Required Stylesheets -->
+<link href="./css/bootstrap/bootstrap.css" rel="stylesheet"></link>
+<link href="./plugin/layui/css/layui.css" rel="stylesheet"></link>
+<link href="./plugin/loading/showLoading.css" rel="stylesheet"></link>
+
+<!-- Required Javascript -->
+<script src="./plugin/jquery/jquery-1.11.3.min.js"></script>
+<script src="./plugin/layui/layui.js"></script>
+<script src="./plugin/loading/jquery.showLoading.js"></script>
+<script src="./js/bootstrap/bootstrap.min.js"></script>
+<script src="./js/bootstrap/bootstrap-treeview.js"></script>
+<script src="./js/common/filter.js"></script>
+<script src="./js/modules/tactics.js"></script>
+<style type="text/css">
+#tree {
+	width: 200px;
+	background: #ddd;
+}
+
+.c_right {
+	margin-left: 220px;
+}
+
+.c_left {
+	width: 220px;
+	float: left;
+	overflow: auto;
+}
+
+.x_header {
+	background: none repeat scroll 0 0 #337ab7;
+	border: none;
+	border-radius: 0;
+	color: #fff;
+	height: 80px;
+}
+
+.navbar-header {
+	margin-top: 14px;
+}
+
+.navbar-header {
+	font-size: 35px;
+}
+
+.navbar-nav {
+	font-size: 16px;
+	margin-top: 14px;
+	margin-left: 50px;
+}
+
+.add-btn {
+	margin-left: 10px;
+	margin-top: 5px;
+}
+
+.div-search {
+	float: right;
+	margin-right: 30px;
+	width: 500px;
+}
+
+.input-search {
+	width: 50%;
+	margin-right: 5px;
+}
+
+.float-left {
+	float: left;
+}
+
+.create-tab {
+	margin-top: 20px;
+}
+
+.create-label {
+	width: 130px;
+	text-align: left;
+}
+
+.create-input {
+	width: 90%;
+}
+
+.create-input-mini {
+	width: 27%;
+}
+</style>
+<script type="text/html" id="tacticsBar">
+  <a class="layui-btn layui-btn-xs" lay-event="detail">查看</a>
+  <!-- 这里同样支持 laytpl 语法，如： -->
+  {{#  if(d.status == 0){ }}
+    <a class="layui-btn layui-btn-xs" lay-event="edit">启用</a>
+  {{#  } }}
+  {{#  if(d.status != 0){ }}
+    <a class="layui-btn layui-btn-xs" lay-event="edit">禁用</a>
+  {{#  } }}
+  <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del">删除</a>
+</script>
+<script type="text/html" id="taskBar">
+  <a class="layui-btn layui-btn-xs" lay-event="edit">编辑</a>
+  <a class="layui-btn layui-btn-xs" lay-event="start">开始</a>
+  <a class="layui-btn layui-btn-xs" lay-event="stop">停止</a>
+  <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del">删除</a>
+</script>
+</head>
+<body>
+	<nav class="navbar navbar-default x_header" role="navigation">
+		<div class="container-fluid">
+			<div class="navbar-header">爬虫管理平台</div>
+			<div>
+				<ul class="nav navbar-nav">
+					<li id="tactics-li"><a href="javascript:void(0);"
+						onclick="getTactics()">采集策略</a></li>
+					<li id="task-li"><a href="javascript:void(0);"
+						onclick="getTask()">采集任务</a></li>
+				</ul>
+			</div>
+		</div>
+	</nav>
+	<div id="main"></div>
+	<pre id="xpathCode" style="display: none; width: 90%; font-size: 15px">
+{
+    "urlListXpath": "", <span style="color: green">// 列表页列表网址的Xpath表达式，到/@href；详情页该字段填空字符串</span>
+    "urlRegex": "", <span style="color: green">// 列表页网址需要满足的正则表达式；详情页该字段填空字符串</span>
+    "urlAdd": "", <span style="color: green">// 列表页构造成完整的网址时需要额外添加的字符；详情页该字段填空字符串</span>
+    "tableName": "", <span style="color: green">// 采集的数据最终要存入的数据库的表名称</span>
+    "itemXpath": <span style="color: red">{</span> <span
+			style="color: green">// 采集详情页，所需信息的Xpath表达式</span>
+        "title": "", <span style="color: green">// tableName表里面名称为title的字段，取到的值会存入该字段</span>
+        "author": "", <span style="color: green">// tableName表里面名称为author的字段，取到的值会存入该字段</span>
+        "pubtime": "", <span style="color: green">// tableName表里面名称为pubtime的字段，取到的值会存入该字段</span>
+        "content": "" <span style="color: green">// tableName表里面名称为content的字段，取到的值会存入该字段</span>
+	...... <span style="color: green">// 字段值自己自由定义，只需要满足一个条件：key必须是tableName表的字段名</span>
+    <span style="color: red">}</span>
+}
+	</pre>
+	<pre id="jsCode" style="display: none; width: 90%; font-size: 15px">
+<span style="color: green">// 列表页网址需要满足的正则表达式；字符串"var urlRegex"作为是否解析列表页的标识</span>
+<span style="color: #db0927">var</span> urlRegex = "";
+<span style="color: green">// 获取列表页内的网址，方法名必须为getUrlList</span>
+<span style="color: #db0927">function</span> getUrlList(data){
+  ...... <span style="color: green">// 处理逻辑</span>
+  <span style="color: green">// 列表页列表网址的结果集必须为urlList，用于和java集合对象匹配</span>
+  <span style="color: green">// 将生成的网址加入到结果集urlList里面去</span>
+  urlList.add(url1);
+  urlList.add(url2);
+  ......
+}<span style="color: green">// 如果不是列表页，那么只需要定义function getItemInfo(data)，上面的都不要</span>
+
+<span style="color: green">// 获取详情页内容，方法名必须为getItemInfo</span>
+<span style="color: #db0927">function</span> getItemInfo(data) {
+  <span style="color: green">// 采集的结果必须为itemInfo，用于和java对象匹配。先设置采集结果存储到的表名称</span>
+  itemInfo.setTableName('tableName');
+  <span style="color: green">// 从itemInfo中获取用于存储网页内容的集合columns</span>
+  <span style="color: #db0927">var</span> columns = itemInfo.getColumns();
+  ...... <span style="color: green">// 处理逻辑</span>
+  <span style="color: green">// 将获取到的内容添加到集合columns里面去</span>
+  <span style="color: #db0927">var</span> column1 = {
+    "title": "", <span style="color: green">// tableName表里面名称为title的字段，取到的值会存入该字段</span>
+    "author": "", <span style="color: green">// tableName表里面名称为author的字段，取到的值会存入该字段</span>
+    "pubtime": "", <span style="color: green">// tableName表里面名称为pubtime的字段，取到的值会存入该字段</span>
+    "content": "" <span style="color: green">// tableName表里面名称为content的字段，取到的值会存入该字段</span>
+    ...... <span style="color: green">// 字段值自己自由定义，只需要满足一个条件：key必须是tableName表的字段名</span>
+  }
+  columns.add(column1);
+  ......
+}
+	</pre>
+</body>
+</html>
